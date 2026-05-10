@@ -1,7 +1,7 @@
 ---
 title: Fix TSDR Workflow Command Parsers — API Response Structure Mismatch
 type: fix
-status: active
+status: completed
 created: 2026-05-10
 scope: internal/cli/trademark_*.go, internal/cli/sync.go, internal/cli/channel_workflow.go, internal/cli/promoted_case-multi-status.go
 origin: Live API testing session 2026-05-09 — 12 bugs found, 6 P0
