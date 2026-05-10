@@ -102,6 +102,77 @@ func (c *Client) GetWithHeaders(path string, params map[string]string, headers m
 	return result, err
 }
 
+// PATCH: GetJSON makes a GET with Accept: application/json using a plain
+// net/http client. The surf-impersonated client sets Chrome-like Accept
+// headers that override ours, causing content-negotiating APIs (like TSDR)
+// to return XML instead of JSON. This bypasses surf for requests that
+// require reliable JSON content negotiation.
+func (c *Client) GetJSON(path string, params map[string]string) (json.RawMessage, error) {
+	if !c.NoCache && !c.DryRun && c.cacheDir != "" {
+		if cached, ok := c.readCache(path, params); ok {
+			return cached, nil
+		}
+	}
+
+	targetURL := c.BaseURL + path
+	req, err := http.NewRequest("GET", targetURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	if params != nil {
+		q := req.URL.Query()
+		for k, v := range params {
+			if v != "" {
+				q.Set(k, v)
+			}
+		}
+		req.URL.RawQuery = q.Encode()
+	}
+
+	authHeader, err := c.authHeader()
+	if err != nil {
+		return nil, err
+	}
+	if authHeader != "" {
+		req.Header.Set("USPTO-API-KEY", authHeader)
+	}
+	if c.Config != nil {
+		for k, v := range c.Config.Headers {
+			req.Header.Set(k, v)
+		}
+	}
+	// Re-force Accept after config headers to ensure it isn't overridden
+	req.Header.Set("Accept", "application/json")
+
+	plainClient := &http.Client{Timeout: 30 * time.Second}
+	c.limiter.Wait()
+
+	resp, err := plainClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GET %s: %w", path, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response: %w", err)
+	}
+	body = sanitizeJSONResponse(body)
+
+	if resp.StatusCode >= 400 {
+		return nil, &APIError{Method: "GET", Path: path, StatusCode: resp.StatusCode, Body: truncateBody(body)}
+	}
+
+	c.limiter.OnSuccess()
+	result := json.RawMessage(body)
+	if !c.NoCache && !c.DryRun && c.cacheDir != "" {
+		c.writeCache(path, params, result)
+	}
+	return result, nil
+}
+
 func (c *Client) ProbeGet(path string) (int, error) {
 	_, status, err := c.do("GET", path, nil, nil, nil)
 	return status, err

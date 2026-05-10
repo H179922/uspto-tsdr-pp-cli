@@ -54,10 +54,10 @@ and attorney of record.`,
 				return err
 			}
 
-			// Fetch status with Accept: application/json
+			// PATCH: use GetJSON (plain HTTP) instead of GetWithHeaders — surf's
+			// Chrome impersonation overrides Accept header, causing XML response.
 			path := replacePathParam("/casestatus/{caseid}/info", "caseid", caseID)
-			headers := map[string]string{"Accept": "application/json"}
-			data, err := c.GetWithHeaders(path, nil, headers)
+			data, err := c.GetJSON(path, nil)
 			if err != nil {
 				return classifyAPIError(err, flags)
 			}
@@ -152,22 +152,27 @@ func parseTrademarkStatus(data json.RawMessage, serial string) trademarkSnapshot
 		}
 	}
 
-	snap.MarkText = extractStringField(obj, "MarkVerbalElementText", "markVerbalElementText",
+	// PATCH: correct TSDR API field names — actual JSON uses short names from
+	// the live /casestatus/{caseid}/info endpoint, not ST96 XML-derived names.
+	snap.MarkText = extractStringField(obj, "markElement",
+		"MarkVerbalElementText", "markVerbalElementText",
 		"MarkText", "markText", "wordMark")
-	snap.Status = extractStringField(obj, "MarkCurrentStatusExternalDescriptionText",
+	snap.Status = extractStringField(obj, "extStatusDesc",
+		"MarkCurrentStatusExternalDescriptionText",
 		"markCurrentStatusExternalDescriptionText", "Status", "status",
 		"MarkCurrentStatusDescriptionText", "markCurrentStatusDescriptionText")
-	snap.StatusDate = trimDate(extractStringField(obj, "MarkCurrentStatusDate",
-		"markCurrentStatusDate", "StatusDate", "statusDate"))
-	snap.FilingDate = trimDate(extractStringField(obj, "ApplicationDate",
-		"applicationDate", "FilingDate", "filingDate"))
-	snap.RegistrationNo = extractStringField(obj, "RegistrationNumber",
-		"registrationNumber", "RegNumber", "regNumber")
-	snap.RegistrationDt = trimDate(extractStringField(obj, "RegistrationDate",
-		"registrationDate"))
-	snap.DrawingCode = extractStringField(obj, "MarkDrawingCode",
-		"markDrawingCode", "DrawingCode", "drawingCode")
-	snap.Attorney = extractStringField(obj, "AttorneyName", "attorneyName",
+	snap.StatusDate = trimDate(extractStringField(obj, "statusDate",
+		"MarkCurrentStatusDate", "markCurrentStatusDate", "StatusDate"))
+	snap.FilingDate = trimDate(extractStringField(obj, "filingDate",
+		"ApplicationDate", "applicationDate", "FilingDate"))
+	snap.RegistrationNo = extractStringField(obj, "usRegistrationNumber",
+		"RegistrationNumber", "registrationNumber", "RegNumber", "regNumber")
+	snap.RegistrationDt = trimDate(extractStringField(obj, "registrationDate",
+		"RegistrationDate"))
+	snap.DrawingCode = extractStringField(obj, "markDrawingCd",
+		"MarkDrawingCode", "markDrawingCode", "DrawingCode", "drawingCode")
+	snap.Attorney = extractStringField(obj, "lawOffAssigned",
+		"AttorneyName", "attorneyName",
 		"StaffName", "staffName", "CorrespondentName", "correspondentName")
 
 	// Extract owner from owner bag
@@ -182,15 +187,25 @@ func parseTrademarkStatus(data json.RawMessage, serial string) trademarkSnapshot
 	return snap
 }
 
+// PATCH: rewrite envelope unwrap — TSDR API returns {"trademarks":[{status:{...}, parties:{...}, ...}]}.
+// Flatten nested "status" and "parties" sub-objects into the returned map so
+// extractStringField() finds fields without nested path traversal.
 func extractTSDRObject(root map[string]json.RawMessage) map[string]interface{} {
-	// Try trademarkBag envelope
+	// Try TSDR "trademarks" array envelope (actual live API structure)
+	if raw, ok := root["trademarks"]; ok {
+		var tms []map[string]interface{}
+		if json.Unmarshal(raw, &tms) == nil && len(tms) > 0 {
+			return flattenTSDRTrademark(tms[0])
+		}
+	}
+
+	// Try trademarkBag envelope (ST96 XML-derived, kept for backward compat)
 	for _, key := range []string{"trademarkBag", "TrademarkBag"} {
 		if raw, ok := root[key]; ok {
 			var bags []map[string]interface{}
 			if json.Unmarshal(raw, &bags) == nil && len(bags) > 0 {
 				return bags[0]
 			}
-			// Might be a single object
 			var single map[string]interface{}
 			if json.Unmarshal(raw, &single) == nil {
 				return single
@@ -217,8 +232,59 @@ func extractTSDRObject(root map[string]json.RawMessage) map[string]interface{} {
 	return nil
 }
 
+// PATCH: flatten TSDR trademark object — merges nested "status" and "parties"
+// sub-objects into the top level so extractStringField sees all fields flat.
+func flattenTSDRTrademark(tm map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{}, len(tm)+30)
+
+	// Copy top-level keys first (gsList, prosecutionHistory, publication, etc.)
+	for k, v := range tm {
+		result[k] = v
+	}
+
+	// Flatten "status" sub-object — contains markElement, extStatusDesc, filingDate, etc.
+	if statusObj, ok := tm["status"].(map[string]interface{}); ok {
+		for k, v := range statusObj {
+			if _, exists := result[k]; !exists {
+				result[k] = v
+			}
+		}
+	}
+
+	// Flatten "parties" sub-object — contains ownerGroups
+	if partiesObj, ok := tm["parties"].(map[string]interface{}); ok {
+		for k, v := range partiesObj {
+			if _, exists := result[k]; !exists {
+				result[k] = v
+			}
+		}
+	}
+
+	return result
+}
+
+// PATCH: rewrite owner extraction — TSDR API uses parties.ownerGroups which is
+// a dict keyed by party type code (e.g. "10"), values are arrays of owner objects.
 func extractTSDROwner(obj map[string]interface{}) string {
-	// Look for OwnerBag/ownerBag
+	// Try TSDR ownerGroups structure (dict of party-type → []owner)
+	if og, ok := obj["ownerGroups"]; ok {
+		if groups, ok := og.(map[string]interface{}); ok {
+			for _, groupVal := range groups {
+				if arr, ok := groupVal.([]interface{}); ok && len(arr) > 0 {
+					if m, ok := arr[0].(map[string]interface{}); ok {
+						name := extractStringField(m, "name", "Name",
+							"LegalEntityName", "legalEntityName",
+							"EntityName", "entityName", "OwnerName", "ownerName")
+						if name != "" {
+							return name
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Legacy: look for OwnerBag/ownerBag (ST96 XML envelope)
 	for _, key := range []string{"OwnerBag", "ownerBag", "Owners", "owners", "ApplicantBag", "applicantBag"} {
 		if bag, ok := obj[key]; ok {
 			if arr, ok := bag.([]interface{}); ok && len(arr) > 0 {
@@ -236,7 +302,44 @@ func extractTSDROwner(obj map[string]interface{}) string {
 	return extractStringField(obj, "OwnerName", "ownerName", "applicantName")
 }
 
+// PATCH: rewrite class extraction — TSDR API uses gsList[] with nested
+// internationalClasses[].code for class codes.
 func extractTSDRClasses(obj map[string]interface{}) string {
+	// Try TSDR gsList structure
+	if bag, ok := obj["gsList"]; ok {
+		if arr, ok := bag.([]interface{}); ok {
+			var classes []string
+			for _, item := range arr {
+				if m, ok := item.(map[string]interface{}); ok {
+					// internationalClasses is an array of {code, description}
+					if icRaw, ok := m["internationalClasses"]; ok {
+						if icArr, ok := icRaw.([]interface{}); ok {
+							for _, ic := range icArr {
+								if icMap, ok := ic.(map[string]interface{}); ok {
+									cls := extractStringField(icMap, "code", "Code")
+									if cls != "" {
+										classes = append(classes, cls)
+									}
+								}
+							}
+						}
+					}
+					// Fallback: direct class code on the gs entry
+					if len(classes) == 0 {
+						cls := extractStringField(m, "ClassNumber", "classNumber", "code")
+						if cls != "" {
+							classes = append(classes, cls)
+						}
+					}
+				}
+			}
+			if len(classes) > 0 {
+				return strings.Join(classes, ", ")
+			}
+		}
+	}
+
+	// Legacy: GoodsAndServicesBag (ST96 XML envelope)
 	for _, key := range []string{"GoodsAndServicesBag", "goodsAndServicesBag",
 		"GoodsAndServices", "goodsAndServices", "ClassificationBag", "classificationBag"} {
 		if bag, ok := obj[key]; ok {
@@ -260,9 +363,11 @@ func extractTSDRClasses(obj map[string]interface{}) string {
 	return ""
 }
 
+// PATCH: prioritize TSDR API field name "prosecutionHistory" in key search.
 func countTSDREvents(obj map[string]interface{}) int {
-	for _, key := range []string{"ProsecutionHistoryBag", "prosecutionHistoryBag",
-		"ProsecutionHistory", "prosecutionHistory",
+	for _, key := range []string{"prosecutionHistory",
+		"ProsecutionHistoryBag", "prosecutionHistoryBag",
+		"ProsecutionHistory",
 		"MarkEventBag", "markEventBag", "EventBag", "eventBag"} {
 		if bag, ok := obj[key]; ok {
 			if arr, ok := bag.([]interface{}); ok {

@@ -50,10 +50,9 @@ and more. Use --filter-type to narrow by document type code.`,
 				return err
 			}
 
-			// Fetch document list
+			// PATCH: use GetJSON (plain HTTP) — surf overrides Accept header.
 			path := replacePathParam("/casedocs/{caseid}/info", "caseid", caseID)
-			headers := map[string]string{"Accept": "application/json"}
-			data, err := c.GetWithHeaders(path, nil, headers)
+			data, err := c.GetJSON(path, nil)
 			if err != nil {
 				return classifyAPIError(err, flags)
 			}

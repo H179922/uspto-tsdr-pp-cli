@@ -72,9 +72,9 @@ detect changes. First run always reports all marks as new.`,
 				}
 
 				caseID := normalizeCaseID(serial)
+				// PATCH: use GetJSON (plain HTTP) — surf overrides Accept header.
 				path := replacePathParam("/casestatus/{caseid}/info", "caseid", caseID)
-				headers := map[string]string{"Accept": "application/json"}
-				data, fetchErr := c.GetWithHeaders(path, nil, headers)
+				data, fetchErr := c.GetJSON(path, nil)
 				if fetchErr != nil {
 					fmt.Fprintf(cmd.ErrOrStderr(), "warning: could not fetch %s: %v\n", serial, fetchErr)
 					entry.CurrentStatus = "error"

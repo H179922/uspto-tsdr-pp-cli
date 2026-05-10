@@ -50,12 +50,11 @@ For detailed per-mark data (owner, classes, attorney), use
 				return err
 			}
 
-			// Use multi-status endpoint for efficiency
+			// PATCH: use GetJSON (plain HTTP) — surf overrides Accept header.
 			ids := strings.Join(args, ",")
 			path := replacePathParam("/caseMultiStatus/{type}", "type", useType)
 			params := map[string]string{"ids": ids}
-			headers := map[string]string{"Accept": "application/json"}
-			data, err := c.GetWithHeaders(path, params, headers)
+			data, err := c.GetJSON(path, params)
 			if err != nil {
 				// Fallback: fetch individually
 				return batchFetchIndividual(cmd, c, flags, args)
@@ -152,16 +151,16 @@ func parseBatchResponse(data json.RawMessage, serials []string) []tmBatchEntry {
 	return entries
 }
 
+// PATCH: use GetJSON interface — surf overrides Accept header.
 func batchFetchIndividual(cmd *cobra.Command, c interface {
-	GetWithHeaders(path string, params map[string]string, headers map[string]string) (json.RawMessage, error)
+	GetJSON(path string, params map[string]string) (json.RawMessage, error)
 }, flags *rootFlags, serials []string) error {
 	var entries []tmBatchEntry
 
 	for _, serial := range serials {
 		caseID := normalizeCaseID(serial)
 		path := replacePathParam("/casestatus/{caseid}/info", "caseid", caseID)
-		headers := map[string]string{"Accept": "application/json"}
-		data, err := c.GetWithHeaders(path, nil, headers)
+		data, err := c.GetJSON(path, nil)
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "warning: could not fetch %s: %v\n", serial, err)
 			entries = append(entries, tmBatchEntry{SerialNumber: serial, Status: "error"})
