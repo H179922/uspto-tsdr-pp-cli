@@ -1695,7 +1695,9 @@ func (s *Store) UpsertV1(data json.RawMessage) error {
 // Includes both flat resources and dependent (parent-child) resources so a
 // child path-item annotated with x-resource-id resolves the same as a flat
 // path-item.
+// PATCH: add watch cache ID field — tmWatchEntry uses "serialNumber" as key.
 var resourceIDFieldOverrides = map[string]string{
+	"watch": "serialNumber",
 }
 
 // genericIDFieldFallbacks is the runtime safety net for resources that did

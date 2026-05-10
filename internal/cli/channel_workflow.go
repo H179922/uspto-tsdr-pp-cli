@@ -55,7 +55,13 @@ and full resync. After archiving, use 'search' for instant full-text search.`,
 			}
 			defer s.Close()
 
-			resources := []string{"casedocs", "casedocs-bundle-zip",  }
+			// PATCH: TSDR has no JSON list endpoints — sync/archive disabled.
+			resources := defaultSyncResources()
+			if len(resources) == 0 {
+				fmt.Fprintln(cmd.ErrOrStderr(), "TSDR API does not provide JSON list endpoints for bulk sync.")
+				fmt.Fprintln(cmd.ErrOrStderr(), "Use 'trademark watch' to track individual marks, or 'trademark batch' for multi-status checks.")
+				return nil
+			}
 			totalSynced := 0
 
 			for _, resource := range resources {

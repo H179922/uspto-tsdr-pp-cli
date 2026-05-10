@@ -96,6 +96,13 @@ Exit codes & warnings:
 				resources = defaultSyncResources()
 			}
 
+			// PATCH: TSDR has no JSON list endpoints — inform user
+			if len(resources) == 0 {
+				fmt.Fprintln(os.Stderr, "TSDR API does not provide JSON list endpoints for bulk sync.")
+				fmt.Fprintln(os.Stderr, "Use 'trademark watch' to track individual marks, or 'trademark batch' for multi-status checks.")
+				return nil
+			}
+
 			// --full: clear all sync cursors before starting
 			if full {
 				for _, resource := range resources {
@@ -826,25 +833,24 @@ func parseSinceDuration(s string) (time.Time, error) {
 	}
 }
 
+// PATCH: TSDR has no JSON list endpoints — sync resources disabled.
+// The original targets (/casedocs/bundle.xml, /casedocs/bundle.zip) return
+// XML and ZIP binary which the JSON-only sync layer cannot process.
 func defaultSyncResources() []string {
-	return []string{
-		"casedocs",
-		"casedocs-bundle-zip",
-	}
+	return []string{}
 }
 
-// syncResourcePath maps resource names to their actual API endpoint paths.
-// For REST APIs this is typically "/<resource>". For non-REST APIs (e.g., Steam)
-// this preserves the actual endpoint path like "/ISteamApps/GetAppList/v2".
+// PATCH: sync paths preserved for reference but sync is disabled.
+// TSDR endpoints return XML/ZIP binary, not JSON.
 func syncResourcePath(resource string) (string, error) {
 	paths := map[string]string{
-		"casedocs": "/casedocs/bundle.xml",
+		"casedocs":            "/casedocs/bundle.xml",
 		"casedocs-bundle-zip": "/casedocs/bundle.zip",
 	}
 	if p, ok := paths[resource]; ok {
 		return p, nil
 	}
-	return "", fmt.Errorf("unknown sync resource %q", resource)
+	return "", fmt.Errorf("unknown sync resource %q — TSDR does not provide JSON list endpoints for bulk sync; use 'trademark watch' to track individual marks or 'trademark batch' for multi-status checks", resource)
 }
 
 // resourceIDFieldOverrides projects per-resource IDField (set by the profiler
@@ -856,7 +862,10 @@ func syncResourcePath(resource string) (string, error) {
 // Includes both flat resources and dependent (parent-child) resources so
 // annotations on a child path-item are honored at runtime, not just on
 // flat paths.
+// PATCH: add watch cache ID field — the tmWatchEntry struct uses "serialNumber"
+// as its key, which doesn't match any generic fallback.
 var resourceIDFieldOverrides = map[string]string{
+	"watch": "serialNumber",
 }
 
 // genericIDFieldFallbacks is the runtime safety net for resources that did
