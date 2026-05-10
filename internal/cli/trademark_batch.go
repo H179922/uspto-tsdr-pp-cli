@@ -91,59 +91,103 @@ For detailed per-mark data (owner, classes, attorney), use
 	return cmd
 }
 
+// PATCH: rewrite batch response parser for TSDR API's actual multi-status
+// structure: {"transactionList":[{"trademarks":[{status:{...}, parties:{...}}]}], "size":N}
 func parseBatchResponse(data json.RawMessage, serials []string) []tmBatchEntry {
 	var entries []tmBatchEntry
 
-	// Try as array of objects
+	// Parse root object
+	var root map[string]json.RawMessage
+	if json.Unmarshal(data, &root) != nil {
+		return entries
+	}
+
+	// Try TSDR multi-status: transactionList → each has trademarks[]
+	for _, key := range []string{"transactionList", "TransactionBag"} {
+		raw, ok := root[key]
+		if !ok {
+			continue
+		}
+
+		// If TransactionBag, unwrap one level deeper
+		if key == "TransactionBag" {
+			var bag map[string]json.RawMessage
+			if json.Unmarshal(raw, &bag) == nil {
+				if tl, ok2 := bag["transactionList"]; ok2 {
+					raw = tl
+				}
+			}
+		}
+
+		var transactions []map[string]interface{}
+		if json.Unmarshal(raw, &transactions) != nil {
+			continue
+		}
+
+		for _, txn := range transactions {
+			// Each transaction has a trademarks array
+			tmsRaw, ok := txn["trademarks"]
+			if !ok {
+				continue
+			}
+			tms, ok := tmsRaw.([]interface{})
+			if !ok || len(tms) == 0 {
+				continue
+			}
+			tmObj, ok := tms[0].(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			// Flatten status sub-object (same as extractTSDRObject)
+			flat := flattenTSDRTrademark(tmObj)
+			entry := tmBatchEntry{}
+			entry.SerialNumber = extractStringField(flat, "serialNumber",
+				"ApplicationNumber", "applicationNumber", "SerialNumber")
+			entry.MarkText = extractStringField(flat, "markElement",
+				"MarkVerbalElementText", "markVerbalElementText", "MarkText", "markText")
+			entry.Status = extractStringField(flat, "extStatusDesc",
+				"MarkCurrentStatusExternalDescriptionText",
+				"markCurrentStatusExternalDescriptionText", "Status", "status")
+			entry.FilingDate = trimDate(extractStringField(flat, "filingDate",
+				"ApplicationDate", "applicationDate", "FilingDate"))
+			entry.RegistrationNo = extractStringField(flat, "usRegistrationNumber",
+				"RegistrationNumber", "registrationNumber")
+			entry.Owner = extractTSDROwner(flat)
+
+			sn := entry.SerialNumber
+			if sn != "" {
+				// Strip "sn" prefix if present for display
+				if strings.HasPrefix(strings.ToLower(sn), "sn") {
+					// Keep as-is — the API returns the numeric serial
+				}
+				entries = append(entries, entry)
+			}
+		}
+
+		if len(entries) > 0 {
+			return entries
+		}
+	}
+
+	// Legacy fallback: try as flat array or other wrapper structures
 	var items []map[string]interface{}
 	if json.Unmarshal(data, &items) == nil {
 		for _, item := range items {
 			entry := tmBatchEntry{}
-			entry.SerialNumber = extractStringField(item, "ApplicationNumber", "applicationNumber",
-				"SerialNumber", "serialNumber")
-			entry.MarkText = extractStringField(item, "MarkVerbalElementText", "markVerbalElementText",
-				"MarkText", "markText")
-			entry.Status = extractStringField(item, "MarkCurrentStatusExternalDescriptionText",
-				"markCurrentStatusExternalDescriptionText",
-				"Status", "status")
-			entry.FilingDate = trimDate(extractStringField(item, "ApplicationDate", "applicationDate",
-				"FilingDate", "filingDate"))
-			entry.RegistrationNo = extractStringField(item, "RegistrationNumber", "registrationNumber")
-			entry.Owner = extractStringField(item, "OwnerName", "ownerName",
-				"LegalEntityName", "legalEntityName")
+			entry.SerialNumber = extractStringField(item, "serialNumber",
+				"ApplicationNumber", "applicationNumber", "SerialNumber")
+			entry.MarkText = extractStringField(item, "markElement",
+				"MarkVerbalElementText", "MarkText", "markText")
+			entry.Status = extractStringField(item, "extStatusDesc",
+				"MarkCurrentStatusExternalDescriptionText", "Status", "status")
+			entry.FilingDate = trimDate(extractStringField(item, "filingDate",
+				"ApplicationDate", "applicationDate"))
+			entry.RegistrationNo = extractStringField(item, "usRegistrationNumber",
+				"RegistrationNumber", "registrationNumber")
+			entry.Owner = extractStringField(item, "OwnerName", "ownerName")
 			if entry.SerialNumber != "" {
 				entries = append(entries, entry)
-			}
-		}
-		return entries
-	}
-
-	// Try as object with nested data
-	var wrapper map[string]json.RawMessage
-	if json.Unmarshal(data, &wrapper) == nil {
-		for _, key := range []string{"trademarkBag", "TrademarkBag", "results", "data", "items"} {
-			if raw, ok := wrapper[key]; ok {
-				if json.Unmarshal(raw, &items) == nil {
-					for _, item := range items {
-						entry := tmBatchEntry{}
-						entry.SerialNumber = extractStringField(item, "ApplicationNumber", "applicationNumber",
-							"SerialNumber", "serialNumber")
-						entry.MarkText = extractStringField(item, "MarkVerbalElementText", "markVerbalElementText",
-							"MarkText", "markText")
-						entry.Status = extractStringField(item, "MarkCurrentStatusExternalDescriptionText",
-							"markCurrentStatusExternalDescriptionText",
-							"Status", "status")
-						entry.FilingDate = trimDate(extractStringField(item, "ApplicationDate", "applicationDate"))
-						entry.RegistrationNo = extractStringField(item, "RegistrationNumber", "registrationNumber")
-						entry.Owner = extractStringField(item, "OwnerName", "ownerName")
-						if entry.SerialNumber != "" {
-							entries = append(entries, entry)
-						}
-					}
-					if len(entries) > 0 {
-						return entries
-					}
-				}
 			}
 		}
 	}

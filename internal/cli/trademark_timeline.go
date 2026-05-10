@@ -94,9 +94,11 @@ func extractTMTimeline(data json.RawMessage) []tmTimelineEvent {
 		return events
 	}
 
-	// Look for prosecution history bag
-	for _, key := range []string{"ProsecutionHistoryBag", "prosecutionHistoryBag",
-		"ProsecutionHistory", "prosecutionHistory",
+	// PATCH: prioritize TSDR API field names (entryDate, entryCode, entryDesc)
+	// over ST96 XML names in prosecution history event extraction.
+	for _, key := range []string{"prosecutionHistory",
+		"ProsecutionHistoryBag", "prosecutionHistoryBag",
+		"ProsecutionHistory",
 		"MarkEventBag", "markEventBag", "EventBag", "eventBag"} {
 		if bag, ok := obj[key]; ok {
 			if arr, ok := bag.([]interface{}); ok {
@@ -104,14 +106,17 @@ func extractTMTimeline(data json.RawMessage) []tmTimelineEvent {
 					if m, ok := item.(map[string]interface{}); ok {
 						ev := tmTimelineEvent{}
 						ev.Date = trimDate(extractStringField(m,
+							"entryDate",
 							"ProsecutionHistoryEntryDate", "prosecutionHistoryEntryDate",
 							"MarkEventDate", "markEventDate",
 							"EventDate", "eventDate", "Date", "date"))
 						ev.Code = extractStringField(m,
+							"entryCode",
 							"ProsecutionHistoryEntryCodeDescriptionText", "prosecutionHistoryEntryCodeDescriptionText",
 							"MarkEventEntryNumber", "markEventEntryNumber",
 							"EventCode", "eventCode", "Code", "code")
 						ev.Description = extractStringField(m,
+							"entryDesc",
 							"ProsecutionHistoryEntryDescriptionText", "prosecutionHistoryEntryDescriptionText",
 							"MarkEventDescriptionText", "markEventDescriptionText",
 							"EventDescription", "eventDescription",

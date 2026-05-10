@@ -386,12 +386,27 @@ func trimDate(s string) string {
 }
 
 // extractStringField looks for a value under any of the given keys, returns the first non-empty one.
+// PATCH: handles float64 → integer string conversion for JSON-parsed numeric IDs
+// that would otherwise render as scientific notation (e.g. 7.8787878e+07 → "78787878").
 func extractStringField(obj map[string]interface{}, keys ...string) string {
 	for _, k := range keys {
 		if v, ok := obj[k]; ok && v != nil {
-			s := fmt.Sprintf("%v", v)
-			if s != "" && s != "<nil>" {
-				return s
+			switch val := v.(type) {
+			case float64:
+				// Render whole-number floats as integers (JSON numbers → float64)
+				if val == float64(int64(val)) {
+					return fmt.Sprintf("%d", int64(val))
+				}
+				return fmt.Sprintf("%g", val)
+			case string:
+				if val != "" {
+					return val
+				}
+			default:
+				s := fmt.Sprintf("%v", v)
+				if s != "" && s != "<nil>" {
+					return s
+				}
 			}
 		}
 	}

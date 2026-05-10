@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -50,11 +51,29 @@ and more. Use --filter-type to narrow by document type code.`,
 				return err
 			}
 
-			// PATCH: use GetJSON (plain HTTP) — surf overrides Accept header.
+			// PATCH: the /casedocs/{caseid}/info endpoint returns XML only
+			// (HTTP 406 for Accept: application/json). Try JSON first; on
+			// 406 or XML response, print a clear message instead of empty output.
 			path := replacePathParam("/casedocs/{caseid}/info", "caseid", caseID)
 			data, err := c.GetJSON(path, nil)
 			if err != nil {
+				// Check if this is a 406 Not Acceptable (endpoint doesn't support JSON)
+				var apiErr interface{ Error() string }
+				if errors.As(err, &apiErr) && strings.Contains(apiErr.Error(), "406") {
+					fmt.Fprintf(cmd.ErrOrStderr(), "The TSDR document listing endpoint (/casedocs/%s/info) only supports XML responses.\n", caseID)
+					fmt.Fprintf(cmd.ErrOrStderr(), "Document listing via JSON is not yet supported. Use the USPTO TSDR web interface instead:\n")
+					fmt.Fprintf(cmd.ErrOrStderr(), "  https://tsdr.uspto.gov/#caseNumber=%s&caseSearchType=US_APPLICATION&caseType=DEFAULT&searchType=statusSearch\n", serial)
+					return nil
+				}
 				return classifyAPIError(err, flags)
+			}
+
+			// Guard: if response starts with XML, it slipped through
+			if len(data) > 0 && (data[0] == '<' || (len(data) > 5 && string(data[:5]) == "<?xml")) {
+				fmt.Fprintf(cmd.ErrOrStderr(), "The TSDR document listing endpoint returned XML (not JSON).\n")
+				fmt.Fprintf(cmd.ErrOrStderr(), "Document listing via JSON is not yet supported. Use the USPTO TSDR web interface instead:\n")
+				fmt.Fprintf(cmd.ErrOrStderr(), "  https://tsdr.uspto.gov/#caseNumber=%s&caseSearchType=US_APPLICATION&caseType=DEFAULT&searchType=statusSearch\n", serial)
+				return nil
 			}
 
 			docs := parseTMDocuments(data)
