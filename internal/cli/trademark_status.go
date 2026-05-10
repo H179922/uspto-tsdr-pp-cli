@@ -167,8 +167,8 @@ func parseTrademarkStatus(data json.RawMessage, serial string) trademarkSnapshot
 		"ApplicationDate", "applicationDate", "FilingDate"))
 	snap.RegistrationNo = extractStringField(obj, "usRegistrationNumber",
 		"RegistrationNumber", "registrationNumber", "RegNumber", "regNumber")
-	snap.RegistrationDt = trimDate(extractStringField(obj, "registrationDate",
-		"RegistrationDate"))
+	snap.RegistrationDt = trimDate(extractStringField(obj, "usRegistrationDate",
+		"registrationDate", "RegistrationDate"))
 	snap.DrawingCode = extractStringField(obj, "markDrawingCd",
 		"MarkDrawingCode", "markDrawingCode", "DrawingCode", "drawingCode")
 	snap.Attorney = extractStringField(obj, "lawOffAssigned",
