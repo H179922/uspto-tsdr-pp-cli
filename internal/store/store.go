@@ -746,9 +746,9 @@ func (s *Store) upsertCasedocContentPdfTx(tx *sql.Tx, id string, obj map[string]
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casedoc_id = excluded.casedoc_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casedoc_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casedoc_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casedoc_content_pdf: %w", err)
 	}
@@ -796,9 +796,9 @@ func (s *Store) upsertCasedocContentZipTx(tx *sql.Tx, id string, obj map[string]
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casedoc_id = excluded.casedoc_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casedoc_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casedoc_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casedoc_content_zip: %w", err)
 	}
@@ -846,9 +846,9 @@ func (s *Store) upsertCasedocDownloadPdfTx(tx *sql.Tx, id string, obj map[string
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casedoc_id = excluded.casedoc_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casedoc_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casedoc_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casedoc_download_pdf: %w", err)
 	}
@@ -896,9 +896,9 @@ func (s *Store) upsertCasedocDownloadZipTx(tx *sql.Tx, id string, obj map[string
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casedoc_id = excluded.casedoc_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casedoc_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casedoc_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casedoc_download_zip: %w", err)
 	}
@@ -946,9 +946,9 @@ func (s *Store) upsertCasedocInfoTx(tx *sql.Tx, id string, obj map[string]any, d
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casedoc_id = excluded.casedoc_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casedoc_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casedoc_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casedoc_info: %w", err)
 	}
@@ -996,9 +996,9 @@ func (s *Store) upsertMediaTx(tx *sql.Tx, id string, obj map[string]any, data js
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casedoc_id = excluded.casedoc_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casedoc_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casedoc_id"),
 	); err != nil {
 		return fmt.Errorf("insert into media: %w", err)
 	}
@@ -1046,9 +1046,9 @@ func (s *Store) upsertBundleTx(tx *sql.Tx, id string, obj map[string]any, data j
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casedocs_id = excluded.casedocs_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casedocs_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casedocs_id"),
 	); err != nil {
 		return fmt.Errorf("insert into bundle: %w", err)
 	}
@@ -1096,9 +1096,9 @@ func (s *Store) upsertCasedocsContentPdfTx(tx *sql.Tx, id string, obj map[string
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casedocs_id = excluded.casedocs_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casedocs_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casedocs_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casedocs_content_pdf: %w", err)
 	}
@@ -1146,9 +1146,9 @@ func (s *Store) upsertCasedocsContentZipTx(tx *sql.Tx, id string, obj map[string
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casedocs_id = excluded.casedocs_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casedocs_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casedocs_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casedocs_content_zip: %w", err)
 	}
@@ -1196,9 +1196,9 @@ func (s *Store) upsertCasedocsDownloadPdfTx(tx *sql.Tx, id string, obj map[strin
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casedocs_id = excluded.casedocs_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casedocs_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casedocs_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casedocs_download_pdf: %w", err)
 	}
@@ -1246,9 +1246,9 @@ func (s *Store) upsertCasedocsDownloadZipTx(tx *sql.Tx, id string, obj map[strin
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casedocs_id = excluded.casedocs_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casedocs_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casedocs_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casedocs_download_zip: %w", err)
 	}
@@ -1296,9 +1296,9 @@ func (s *Store) upsertCasedocsInfoTx(tx *sql.Tx, id string, obj map[string]any, 
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casedocs_id = excluded.casedocs_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casedocs_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casedocs_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casedocs_info: %w", err)
 	}
@@ -1346,9 +1346,9 @@ func (s *Store) upsertContentHtmlTx(tx *sql.Tx, id string, obj map[string]any, d
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casestatus_id = excluded.casestatus_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casestatus_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casestatus_id"),
 	); err != nil {
 		return fmt.Errorf("insert into content_html: %w", err)
 	}
@@ -1396,9 +1396,9 @@ func (s *Store) upsertCasestatusContentPdfTx(tx *sql.Tx, id string, obj map[stri
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casestatus_id = excluded.casestatus_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casestatus_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casestatus_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casestatus_content_pdf: %w", err)
 	}
@@ -1446,9 +1446,9 @@ func (s *Store) upsertCasestatusContentZipTx(tx *sql.Tx, id string, obj map[stri
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casestatus_id = excluded.casestatus_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casestatus_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casestatus_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casestatus_content_zip: %w", err)
 	}
@@ -1496,9 +1496,9 @@ func (s *Store) upsertCasestatusDownloadPdfTx(tx *sql.Tx, id string, obj map[str
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casestatus_id = excluded.casestatus_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casestatus_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casestatus_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casestatus_download_pdf: %w", err)
 	}
@@ -1546,9 +1546,9 @@ func (s *Store) upsertCasestatusDownloadZipTx(tx *sql.Tx, id string, obj map[str
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casestatus_id = excluded.casestatus_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casestatus_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casestatus_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casestatus_download_zip: %w", err)
 	}
@@ -1596,9 +1596,9 @@ func (s *Store) upsertCasestatusInfoTx(tx *sql.Tx, id string, obj map[string]any
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casestatus_id = excluded.casestatus_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casestatus_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casestatus_id"),
 	); err != nil {
 		return fmt.Errorf("insert into casestatus_info: %w", err)
 	}
@@ -1646,9 +1646,9 @@ func (s *Store) upsertV1Tx(tx *sql.Tx, id string, obj map[string]any, data json.
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET casestatus_id = excluded.casestatus_id, data = excluded.data, synced_at = excluded.synced_at`,
 		id,
+		lookupFieldValue(obj, "casestatus_id"),
 		string(data),
 		time.Now(),
-		lookupFieldValue(obj, "casestatus_id"),
 	); err != nil {
 		return fmt.Errorf("insert into v1: %w", err)
 	}

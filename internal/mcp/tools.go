@@ -399,14 +399,11 @@ func makeAPIHandler(method, pathTemplate string, bindings []mcpParamBinding, pos
 		case "GET":
 			data, err = c.Get(path, params)
 		case "POST":
-			body, _ := json.Marshal(bodyArgs)
-			data, _, err = c.Post(path, body)
+			data, _, err = c.Post(path, bodyArgs)
 		case "PUT":
-			body, _ := json.Marshal(bodyArgs)
-			data, _, err = c.Put(path, body)
+			data, _, err = c.Put(path, bodyArgs)
 		case "PATCH":
-			body, _ := json.Marshal(bodyArgs)
-			data, _, err = c.Patch(path, body)
+			data, _, err = c.Patch(path, bodyArgs)
 		case "DELETE":
 			data, _, err = c.Delete(path)
 		default:

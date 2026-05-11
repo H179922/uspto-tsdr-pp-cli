@@ -97,14 +97,6 @@ Highlights:
   • trademark batch     — Batch status check for portfolios
   • trademark docs      — List prosecution file documents
 
-Highlights (not in the official API docs):
-  • trademark status   Full current state of a trademark in one command — mark text, status, owner, classes, filing/registration dates, attorney, and prosecution event count
-  • trademark timeline   Every prosecution event in chronological order — office actions, examiner reviews, publication events, and registration milestones
-  • trademark deadlines   Calculate Section 8, 9, and 15 maintenance deadlines with window-open dates and days-away countdown
-  • trademark watch   Monitor multiple trademarks for status changes — caches previous statuses locally and flags any changes since last check
-  • trademark batch   Batch status lookup for multiple trademarks using the multi-case endpoint or individual fallback with rate-limit throttling
-  • trademark docs   List all documents in the prosecution file — office actions, responses, specimens, registration certificates — with type and date filtering
-
 Add --agent to any command for JSON output + non-interactive mode.
 Run 'uspto-tsdr-pp-cli doctor' to verify auth and connectivity.`,
 		SilenceUsage: true,

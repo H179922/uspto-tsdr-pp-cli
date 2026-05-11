@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"uspto-tsdr-pp-cli/internal/client"
 	"uspto-tsdr-pp-cli/internal/store"
@@ -261,5 +260,3 @@ func resolveLocal(ctx context.Context, resourceType string, isList bool, path st
 	return item, prov, nil
 }
 
-// Ensure time import is used (compilation guard).
-var _ = time.Now
